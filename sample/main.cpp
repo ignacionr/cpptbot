@@ -1,5 +1,7 @@
+#include <fstream>
 #include <iostream>
-#include <set>
+#include <memory>
+#include <unordered_set>
 #include <nlohmann/json.hpp>
 #include "../cpptbot.hpp"
 
@@ -22,6 +24,19 @@ private:
     int count_{3};
 };
 
+uint64_t read_last_chat_id() {
+    uint64_t result{};
+    std::ifstream in("last_chat.txt");
+    if (in.is_open()) {
+        in >> result;
+    }
+    return result;
+}
+void write_last_chat_id(uint64_t value) {
+    std::ofstream out("last_chat.txt");
+    out << value;
+}
+
 int main() {
         // Read API key from environment variable
     const char* env_api_key = std::getenv("TBOT_SAMPLE_KEY");
@@ -30,8 +45,19 @@ int main() {
         std::cerr << "Error: TBOT_SAMPLE_KEY environment variable not set." << std::endl;
         return 1;
     }
+    using parrot_t = parrot<ignacionr::chat<nlohmann::json>,nlohmann::json>;
+    std::unordered_set<std::unique_ptr<parrot_t>> parrots;
     ignacionr::cpptbot bot{env_api_key};
-    bot.poll([](auto &chat){
-        new parrot<ignacionr::chat<nlohmann::json>,nlohmann::json>(chat);
+
+    // reopen last chat
+    if (auto last_chat = read_last_chat_id(); last_chat) {
+        auto &chat = bot.chat_from_id(last_chat);
+        chat.send({{"text", "and, we're back!"}});
+        parrots.emplace(new parrot_t(chat));
+    }
+
+    bot.poll([&parrots](auto &chat, auto chat_id) {
+        write_last_chat_id(chat_id);
+        parrots.emplace(new parrot_t(chat));
     });
 }

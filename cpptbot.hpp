@@ -76,7 +76,18 @@ namespace ignacionr
             return response;
         }
 
-        template<typename callback_t>
+        chat<json> &chat_from_id(uint64_t chat_id)
+        {
+            chats_.emplace(chat_id,
+                           chat<json>{
+                               [this, chat_id](json msg)
+                               {
+                                   sendMessage(chat_id, msg);
+                               }});
+            return chats_.at(chat_id);
+        }
+
+        template <typename callback_t>
         void poll(callback_t on_new_chat)
         {
             uint64_t last_update{};
@@ -85,7 +96,7 @@ namespace ignacionr
                 // Prepare the API request payload
                 json payload = {
                     {"offset", last_update + 1},
-                    {"timeout", 60}                 // Long polling timeout (in seconds)
+                    {"timeout", 60} // Long polling timeout (in seconds)
                 };
 
                 // Send the API request
@@ -106,18 +117,16 @@ namespace ignacionr
                         last_update = update["update_id"].get<uint64_t>();
                         auto msg = update["message"];
                         auto chat_id = msg["chat"]["id"].get<uint64_t>();
-                        if (!chats_.contains(chat_id)) {
-                            chats_.emplace(chat_id, chat<json>{[this,chat_id](json msg){
-                                sendMessage(chat_id, msg);
-                            }});
-                            on_new_chat(chats_.at(chat_id));
+                        if (!chats_.contains(chat_id))
+                        {
+                            on_new_chat(chat_from_id(chat_id), chat_id);
                         }
                         chats_.at(chat_id).on_message(msg);
                     }
                 }
                 else
                 {
-                    throw std::runtime_error("Failed to get updates: "+ response["description"].get<std::string>());
+                    throw std::runtime_error("Failed to get updates: " + response["description"].get<std::string>());
                 }
             }
         }
