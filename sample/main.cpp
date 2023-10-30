@@ -3,7 +3,7 @@
 #include <memory>
 #include <unordered_set>
 #include <nlohmann/json.hpp>
-#include "../cpptbot.hpp"
+#include "../include/cpptbot.hpp"
 
 template<typename chat_t, typename msg_t>
 class parrot {
