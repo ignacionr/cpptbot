@@ -131,6 +131,31 @@ namespace ignacionr
             }
         }
 
+        std::string get_file_path(std::string_view file_id) {
+            json payload = {
+                "file_id", file_id
+            };
+            auto r = cpr::Post(
+                cpr::Url{base_url + "getFile"},
+                cpr::Header{{"Content-Type", "application/json"}},
+                cpr::Body{payload.dump()});
+            auto response = json::parse(r.text);
+            if (response["ok"].get<bool>())
+            {
+                return response["result"]["file_path"].get<std::string>();
+            }
+            else
+            {
+                throw std::runtime_error("Failed to get file: " + response["description"].get<std::string>());
+            }
+        }
+
+        std::string get_file_contents(std::string_view file_id) {
+            auto file_path = get_file_path(file_id);
+            auto r = cpr::Get(
+                cpr::Url{"https://api.telegram.org/file/bot" + api_key + "/" + file_path});
+            return r.text;
+        }
     private:
         std::string api_key;  // Your Telegram Bot API key
         std::string base_url; // Base URL for Telegram API
