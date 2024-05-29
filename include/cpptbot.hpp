@@ -44,6 +44,7 @@ namespace ignacionr
                 queued_.push(msg);
             }
         }
+        json info;
 
     private:
         sendfn_t sendfn_;
@@ -119,7 +120,9 @@ namespace ignacionr
                         auto chat_id = msg["chat"]["id"].get<uint64_t>();
                         if (!chats_.contains(chat_id))
                         {
-                            on_new_chat(chat_from_id(chat_id), chat_id);
+                            auto &ch = chat_from_id(chat_id);
+                            ch.info = msg["chat"];
+                            on_new_chat(ch, chat_id);
                         }
                         chats_.at(chat_id).on_message(msg);
                     }
