@@ -18,7 +18,7 @@ cmake_minimum_required(VERSION 3.14)
 project(MyBotApp VERSION 1.0 LANGUAGES CXX)
 
 # Specify the C++ standard
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # Include FetchContent module
@@ -35,10 +35,15 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(cppTBot)
 
 # Add your executable
-add_executable(MyBotApp main.cpp)
+add_executable(MyBotApp src/main.cpp)
 
-# Link cppTBot to your executable
-target_link_libraries(MyBotApp PRIVATE cppTBot)
+# Specify the include directory for nlohmann_json
+target_include_directories(MyBotApp PRIVATE 
+  ${CMAKE_BINARY_DIR}/_deps/cpptbot-src/include
+)
+
+target_link_libraries(MyBotApp PRIVATE cpr::cpr nlohmann_json::nlohmann_json)
+
 ```
 
 ### Example `main.cpp`
@@ -46,19 +51,19 @@ target_link_libraries(MyBotApp PRIVATE cppTBot)
 Here is a simple example of `main.cpp` to get you started with cppTBot.
 
 ```cpp
-#include <iostream>
 #include <fstream>
+#include <iostream>
+#include <memory>
 #include <unordered_set>
 #include <nlohmann/json.hpp>
-#include "../include/cpptbot.hpp"
+#include <cpptbot.hpp>
 
-template <typename chat_t, typename msg_t>
+template<typename chat_t, typename msg_t>
 class parrot {
 public:
-    parrot(chat_t &chat) : chat_{chat} {
+    parrot(chat_t &chat): chat_{chat} {
         chat.receive(*this);
     }
-    
     void operator()(msg_t msg) {
         std::cerr << "repeating: " << msg.dump() << std::endl;
         chat_.send(msg);
@@ -67,7 +72,6 @@ public:
             chat_.receive({});
         }
     }
-
 private:
     chat_t &chat_;
     int count_{3};
@@ -81,23 +85,24 @@ uint64_t read_last_chat_id() {
     }
     return result;
 }
-
 void write_last_chat_id(uint64_t value) {
     std::ofstream out("last_chat.txt");
     out << value;
 }
 
 int main() {
+        // Read API key from environment variable
     const char* env_api_key = std::getenv("TBOT_SAMPLE_KEY");
-    if (env_api_key == nullptr) {
+    if (env_api_key == nullptr)
+    {
         std::cerr << "Error: TBOT_SAMPLE_KEY environment variable not set." << std::endl;
         return 1;
     }
-
-    using parrot_t = parrot<ignacionr::cpptbot::chat, nlohmann::json>;
-    std::unordered_set<parrot_t*> parrots;
+    using parrot_t = parrot<ignacionr::chat<nlohmann::json>,nlohmann::json>;
+    std::unordered_set<std::unique_ptr<parrot_t>> parrots;
     ignacionr::cpptbot bot{env_api_key};
 
+    // reopen last chat
     if (auto last_chat = read_last_chat_id(); last_chat) {
         auto &chat = bot.chat_from_id(last_chat);
         chat.send({{"text", "and, we're back!"}});
@@ -132,7 +137,7 @@ cmake --build .
 
 ## Repository Structure
 
-- `include/cppTBot/` - Header files for cppTBot
+- `include/` - Header file for cppTBot
 - `src/` - Source files for cppTBot
 - `sample/` - Sample CMakeLists and source files
 - `tests/` - Unit tests for cppTBot
