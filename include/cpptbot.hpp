@@ -135,9 +135,9 @@ namespace ignacionr
         }
 
         std::string get_file_path(std::string_view file_id) {
-            json payload = {
+            json payload = {{
                 "file_id", file_id
-            };
+            }};
             auto r = cpr::Post(
                 cpr::Url{base_url + "getFile"},
                 cpr::Header{{"Content-Type", "application/json"}},
